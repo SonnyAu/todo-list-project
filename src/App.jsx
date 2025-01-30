@@ -6,55 +6,95 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [projects, setProjects] = useState(["Default"]);
   const [selectedProject, setSelectedProject] = useState("Default");
+
   function addTodo(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     const todoData = Object.fromEntries(formData);
+
+    if (!todoData.task.trim()) {
+      console.warn("Todo must have a task!");
+      return;
+    }
+
     setTodos((prevTodos) => {
-      return [...prevTodos, todoData];
+      const isDuplicate = prevTodos.some(
+        (todo) =>
+          todo.task === todoData.task && todo.project === todoData.project
+      );
+
+      if (isDuplicate) {
+        console.warn("Duplicate todo detected. Skipping addition.");
+        return prevTodos;
+      } else {
+        return [...prevTodos, { ...todoData, id: crypto.randomUUID() }];
+      }
     });
+
+    event.target.reset();
   }
+
+  function updateTodo(id, updatedData) {
+    setTodos((prevTodos) =>
+      prevTodos.map((todo) =>
+        todo.id === id ? { ...todo, ...updatedData } : todo
+      )
+    );
+  }
+
   function addProject(event) {
     event.preventDefault();
-    const newProject = document.getElementById("project-input").value;
+    const projectInput = document.getElementById("project-input").value.trim();
 
-    if (!newProject.trim()) return; // Prevent empty project names
+    if (!projectInput) return; // Prevent empty names
 
-    setProjects((prevProjects) => [...prevProjects, newProject]);
-    // Clear input field after adding
-    document.getElementById("project-input").value = "";
+    if (!projects.includes(projectInput)) {
+      setProjects((prevProjects) => [...prevProjects, projectInput]);
+    } else {
+      console.warn("Project already exists!");
+    }
+
+    document.getElementById("project-input").value = ""; // Clear input field
   }
 
   return (
     <>
       <form className="todo-form" onSubmit={addTodo}>
         <label htmlFor="task">Task:</label>
-        <input id="task" type="text" name="task" placeholder="Do work"></input>
+        <input
+          id="task"
+          type="text"
+          name="task"
+          placeholder="Do work"
+          required
+        />
+
         <label htmlFor="description">Description:</label>
         <input
           id="description"
           type="text"
-          placeholder="Go to office"
           name="description"
+          placeholder="Go to office"
+          required
         />
+
         <label htmlFor="date">Date:</label>
-        <input type="date" id="date" name="date"></input>
+        <input type="date" id="date" name="date" required />
 
         <fieldset>
           <legend>Priority:</legend>
-          <label htmlFor="high">
-            <input type="radio" name="priority" value="High" />
+          <label>
+            <input type="radio" name="priority" value="High" defaultChecked />{" "}
             High
           </label>
-          <label htmlFor="medium">
-            <input type="radio" name="priority" value="med" />
-            Medium
+          <label>
+            <input type="radio" name="priority" value="Medium" /> Medium
           </label>
-          <label htmlFor="low">
-            <input type="radio" name="priority" value="Low" />
-            Low
+          <label>
+            <input type="radio" name="priority" value="Low" /> Low
           </label>
         </fieldset>
+
         <label htmlFor="project">Project:</label>
         <select id="project" name="project">
           {projects.map((project) => (
@@ -63,36 +103,46 @@ function App() {
             </option>
           ))}
         </select>
+
         <div>
           <label htmlFor="project-input">Enter new project:</label>
-          <input id="project-input" type="project-input" />
+          <input id="project-input" type="text" />
           <button type="button" onClick={addProject}>
             Add new project
           </button>
         </div>
+
         <button type="submit">Add Todo</button>
       </form>
+
       <main className="main">
-        <select id="project" name="project">
+        <label htmlFor="filter-project">Filter by Project:</label>
+        <select
+          id="filter-project"
+          value={selectedProject}
+          onChange={(e) => setSelectedProject(e.target.value)}
+        >
           {projects.map((project) => (
             <option key={project} value={project}>
               {project}
             </option>
           ))}
         </select>
-        {todos.map((todo) => {
-          console.log(todo);
-          return (
+
+        {todos
+          .filter((todo) => todo.project === selectedProject)
+          .map((todo) => (
             <TodoItem
-              key={todo.task}
+              key={todo.id}
+              id={todo.id}
               task={todo.task}
               description={todo.description}
               date={todo.date}
               project={todo.project}
               priority={todo.priority}
+              updateTodo={updateTodo}
             />
-          );
-        })}
+          ))}
       </main>
     </>
   );
